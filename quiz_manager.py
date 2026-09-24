@@ -57,6 +57,7 @@ class QuizSession:
     def reset(self):
         """Reset the session."""
         self.score = 0
+        self.total = len(self.get_wrong_questions())
         self.wrong_questions.clear()
     
     def get_percentage(self) -> float:

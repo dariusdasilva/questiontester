@@ -1,7 +1,7 @@
 """CLI flashcard quiz application."""
 
 from flashcard_manager import FlashcardManager
-from quiz_logic import QuizSession
+from quiz_manager import QuizSession
 
 
 def run_quiz():
