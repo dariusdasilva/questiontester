@@ -1,50 +1,74 @@
+"""CLI flashcard quiz application."""
+
+from flashcard_manager import FlashcardManager
+from quiz_logic import QuizSession
 
 
-flashcards = {}
-
-def process_file(file):
-    with open(file, "r") as f:
-        qanda = f.read().split("\n\n")
-        for qa in qanda:
-            flashcards[qa.split("\n")[0]] = qa.split("\n")[1]
-
-
-def ask_questions(dictionary):
-    score = 0
-    wrong_questions = {}
-    for question, answer in dictionary.items():
-        response = input(question + ": ")
-        if response.lower() == answer.lower():
-            print("Correct!\n")
-            score += 1
-            if question in wrong_questions:
-                del wrong_questions[question]
-        else:
-            print("Incorrect." + "\nThe correct answer is: " + answer + ".\n")
-            if question not in wrong_questions:
-                wrong_questions[question] = answer
-
-    print("You scored " + str(score) + " out of " + str(len(dictionary)) + ".")
-    return score, wrong_questions
-
-
-process_file(input("What would you like to revise?: ") + ".txt")
-
-print("\nLet's begin!\n")
-
-score, wrong_questions = ask_questions(flashcards)
-
-while score < len(flashcards) and len(wrong_questions) > 0:
-        response = input("Would you like to go over the questions you got wrong? (y/n): ")
-        print("\n")
-        if response.lower() == "y":
-            score, wrong_questions = ask_questions(wrong_questions)
-        if response.lower() == "n":
-            print("Good luck next time!")
+def run_quiz():
+    """Main CLI quiz application."""
+    
+    # Load flashcards
+    manager = FlashcardManager()
+    
+    try:
+        filename = input("What would you like to revise?: ").strip()
+        manager.load_from_file(filename)
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+        return
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
+    
+    if manager.count() == 0:
+        print("No flashcards found!")
+        return
+    
+    print(f"\nLet's begin. ({manager.count()} questions)\n")
+    
+    # Run initial quiz
+    session = QuizSession(manager.get_flashcards())
+    session.shuffle_questions()
+    _start_quiz(session)
+    
+    # Loop for reviewing wrong questions
+    while session.wrong_questions:
+        response = input("Review incorrect answers? (y/n): ").lower().strip()
+        
+        if response == "y":
+            session.reset()
+            session.flashcards = session.get_wrong_questions()
+            session.shuffle_questions()
+            _start_quiz(session)
+        elif response == "n":
+            print("Better luck next time!")
             break
+        else:
+            print("Please enter 'y' or 'n'.")
+    
+    if not session.wrong_questions:
+        print("Congratulations! You have mastered the material!")
 
-if len(wrong_questions) == 0:
-    print("Congratulations! You have mastered the material!")
+
+def _start_quiz(session: QuizSession):
+    """
+    Conduct a quiz session with user interaction.
+    
+    Args:
+        session: The QuizSession instance
+    """
+    for question, answer in session.flashcards.items():
+        response = input(f"{question}: ").strip()
+        
+        if session.check_answer(question, response):
+            print("✓ Correct!\n")
+        else:
+            print(f"✗ Incorrect.\nThe correct answer is: {answer}\n")
+    
+    score, total = session.get_score()
+    percentage = session.get_percentage()
+    print(f"You scored {score}/{total} ({percentage:.1f}%)\n")
 
 
-
+if __name__ == "__main__":
+    run_quiz()
